@@ -28,9 +28,10 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const authorUrn = tokenData.linkedin_urn || "urn:li:person:mello";
+    // Use MelloAI company page URN
+    const companyUrn = "urn:li:organization:112584025";
 
-    // Post to LinkedIn
+    // Post to LinkedIn Company Page
     const postResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
       headers: {
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
         "X-Restli-Protocol-Version": "2.0.0",
       },
       body: JSON.stringify({
-        author: authorUrn,
+        author: companyUrn,
         lifecycleState: "PUBLISHED",
         specificContent: {
           "com.linkedin.ugc.ShareContent": {
