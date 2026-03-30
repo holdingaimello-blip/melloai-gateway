@@ -12,12 +12,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No text provided" }, { status: 400 });
     }
 
-    // Get LinkedIn token from Master DB
+    // Get LinkedIn token and URN from Master DB
     const master = createClient(MASTER_SUPABASE_URL, MASTER_SUPABASE_KEY);
     
     const { data: tokenData, error: tokenError } = await master
       .from("linkedin_tokens")
-      .select("access_token")
+      .select("access_token,linkedin_urn")
       .eq("user_id", "mello")
       .single();
 
@@ -28,23 +28,7 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Get user profile to obtain correct URN
-    const profileResponse = await fetch("https://api.linkedin.com/v2/me", {
-      headers: {
-        "Authorization": `Bearer ${tokenData.access_token}`,
-        "X-Restli-Protocol-Version": "2.0.0",
-      },
-    });
-
-    if (!profileResponse.ok) {
-      return NextResponse.json({ 
-        error: "Failed to get LinkedIn profile", 
-        details: await profileResponse.text()
-      }, { status: 500 });
-    }
-
-    const profile = await profileResponse.json();
-    const authorUrn = `urn:li:person:${profile.id}`;
+    const authorUrn = tokenData.linkedin_urn || "urn:li:person:mello";
 
     // Post to LinkedIn
     const postResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {

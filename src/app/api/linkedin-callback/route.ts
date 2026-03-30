@@ -49,6 +49,22 @@ export async function GET(request: NextRequest) {
 
     const { access_token, refresh_token, expires_in } = tokenData;
 
+    // Get user info via OpenID (urn:li:person:id)
+    const userinfoResponse = await fetch("https://api.linkedin.com/v2/userinfo", {
+      headers: {
+        "Authorization": `Bearer ${access_token}`,
+      },
+    });
+
+    let linkedinUrn = "mello_linkedin_global";
+    let linkedinId = "unknown";
+
+    if (userinfoResponse.ok) {
+      const userinfo = await userinfoResponse.json();
+      linkedinId = userinfo.sub; // OpenID subject = LinkedIn person ID
+      linkedinUrn = `urn:li:person:${linkedinId}`;
+    }
+
     // Save tokens to Master DB (global LinkedIn profile for Mello)
     const master = createClient(MASTER_SUPABASE_URL, MASTER_SUPABASE_KEY);
 
@@ -56,7 +72,8 @@ export async function GET(request: NextRequest) {
       .from("linkedin_tokens")
       .upsert({
         user_id: "mello", // Global MelloAi profile
-        linkedin_id: "mello_linkedin_global",
+        linkedin_id: linkedinId,
+        linkedin_urn: linkedinUrn,
         access_token: access_token,
         refresh_token: refresh_token,
         expires_at: new Date(Date.now() + expires_in * 1000).toISOString(),
