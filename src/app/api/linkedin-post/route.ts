@@ -28,6 +28,24 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
+    // Get user profile to obtain correct URN
+    const profileResponse = await fetch("https://api.linkedin.com/v2/me", {
+      headers: {
+        "Authorization": `Bearer ${tokenData.access_token}`,
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+    });
+
+    if (!profileResponse.ok) {
+      return NextResponse.json({ 
+        error: "Failed to get LinkedIn profile", 
+        details: await profileResponse.text()
+      }, { status: 500 });
+    }
+
+    const profile = await profileResponse.json();
+    const authorUrn = `urn:li:person:${profile.id}`;
+
     // Post to LinkedIn
     const postResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
@@ -37,7 +55,7 @@ export async function POST(request: NextRequest) {
         "X-Restli-Protocol-Version": "2.0.0",
       },
       body: JSON.stringify({
-        author: "urn:li:person:mello", // Will be replaced with actual URN
+        author: authorUrn,
         lifecycleState: "PUBLISHED",
         specificContent: {
           "com.linkedin.ugc.ShareContent": {
